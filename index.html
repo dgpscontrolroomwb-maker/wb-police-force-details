@@ -190,7 +190,14 @@ function loadData(selectedType = "ALL", searchText = "") {
             var fullText = caption.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
 
             // 🏷 Heading
-            var unitName = caption.split("\n")[0]?.trim() || "";
+            // 🏷 Extract ONLY the first heading line (before any strength text)
+var firstLine = caption.split("\n")[0] || "";
+var unitName = firstLine
+    .replace(/Actual Strength.*/i, "")
+    .replace(/AVAILABLE STRENGTH.*/i, "")
+    .replace(/Contact No.*/i, "")
+    .trim();
+
 
             // 🟢 Actual Strength
             var actualMatch = fullText.match(/Actual Strength\s*---\s*(.*?)(AVAILABLE STRENGTH|Contact No|$)/i);

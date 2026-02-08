@@ -98,166 +98,218 @@
     <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
 
     <script>
-        var map = L.map('map', { zoomControl: true }).setView([23.5, 87.5], 7);
+var map = L.map('map', { zoomControl: true }).setView([23.5, 87.5], 7);
 
-        // 🌍 Premium Map Layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap',
-            maxZoom: 19
-        }).addTo(map);
+// 🌍 Premium Map Layer
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap',
+    maxZoom: 19
+}).addTo(map);
 
-        // 🔥 Cluster Group
-        var markers = L.markerClusterGroup({
-            disableClusteringAtZoom: 13,
-            spiderfyOnMaxZoom: true,
-            showCoverageOnHover: false
-        });
-        map.addLayer(markers);
+// 🔥 Cluster Group
+var markers = L.markerClusterGroup({
+    disableClusteringAtZoom: 13,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false
+});
+map.addLayer(markers);
 
-        // 📡 TSV DATA SOURCE
-        var sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQws1aF25SY9EK4d2o455DnhKd136BwBn7jhJ_PP4L6lLDU1j9cRiLyZf0ilCaeH0D1mz8RgwQoLV9k/pub?gid=0&single=true&output=tsv";
+// 📡 TSV DATA SOURCE
+var sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQws1aF25SY9EK4d2o455DnhKd136BwBn7jhJ_PP4L6lLDU1j9cRiLyZf0ilCaeH0D1mz8RgwQoLV9k/pub?gid=0&single=true&output=tsv";
 
-        // 🎨 HQ COLOR MAP
-        function getHQColor(hq) {
-            const colors = {
-                "DG": "#FF0000",
-                "HQ": "#0000FF",
-                "DMG": "#00FF00",
-                "PS": "#FFFF00",
-                "TG": "#FF00FF",
-                "STG": "#7FFFD4",
-                "OP": "#A52A2A",
-                "TOP": "#808000",
-                "IC": "#008000",
-                "ROP": "#FFA500",
-                "BOP": "#ADD8E6",
-                "CAMP": "#00FFFF"
-            };
-            return colors[hq] || "#555555";
+// 🎨 HQ COLOR MAP
+function getHQColor(hq) {
+    const colors = {
+        "DG": "#FF0000",
+        "HQ": "#0000FF",
+        "DMG": "#00FF00",
+        "PS": "#FFFF00",
+        "TG": "#FF00FF",
+        "STG": "#7FFFD4",
+        "OP": "#A52A2A",
+        "TOP": "#808000",
+        "IC": "#008000",
+        "ROP": "#FFA500",
+        "BOP": "#ADD8E6",
+        "CAMP": "#00FFFF"
+    };
+    return colors[hq] || "#555555";
+}
+
+// ⭐ Premium Glowing Icon
+function createPremiumIcon(color) {
+    return L.divIcon({
+        className: '',
+        html: `<div style="
+            width:18px;height:18px;
+            background:${color};
+            border-radius:50%;
+            border:3px solid white;
+            box-shadow:0 0 6px ${color},0 0 10px ${color},0 0 16px ${color};
+        "></div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+    });
+}
+
+var allMarkersData = [];
+
+// 🚀 LOAD DATA
+function loadData(selectedType = "ALL", searchText = "") {
+
+    markers.clearLayers();
+    allMarkersData = [];
+
+    fetch(sheetURL)
+    .then(r => r.text())
+    .then(data => {
+
+        var rows = data.trim().split("\n");
+        var typesSet = new Set();
+        var bounds = [];
+
+        for (var i = 1; i < rows.length; i++) {
+
+            var cols = rows[i].split("\t");
+
+            var type = cols[1]?.trim() || "Unit";   // Column B
+            var caption = cols[28]?.trim();         // Column AC
+            var lat = parseFloat(cols[29]);         // Column AD
+            var lon = parseFloat(cols[30]);         // Column AE
+            var hq = cols[31]?.trim() || "";        // Column AF
+
+            if (!caption || isNaN(lat) || isNaN(lon)) continue;
+            if (selectedType !== "ALL" && type !== selectedType) continue;
+            if (searchText && !caption.toLowerCase().includes(searchText.toLowerCase())) continue;
+
+            typesSet.add(type);
+
+            var color = getHQColor(hq);
+
+            // 🎯 Smart formatting of AC column
+            var lines = caption.split(/\n+/);
+            var unitName = lines[0] || "";
+            var actualStrength = lines.find(l => l.toLowerCase().includes("actual strength")) || "";
+            var availableStrength = lines.find(l => l.toLowerCase().includes("available strength")) || "";
+            var contact = lines.find(l => l.toLowerCase().includes("contact")) || "";
+
+            actualStrength = actualStrength.replace(/actual strength/gi, "").replace(/---/g, "").trim();
+            availableStrength = availableStrength.replace(/available strength/gi, "").replace(/---/g, "").trim();
+            contact = contact.replace(/contact no[:\-]*/gi, "").trim();
+
+            var marker = L.marker([lat, lon], {
+                icon: createPremiumIcon(color)
+            }).bindPopup(`
+                <div style="min-width:220px;font-family:Segoe UI;">
+                    <div style="font-weight:700;font-size:15px;color:#0d47a1;margin-bottom:6px;">
+                        ${unitName}
+                    </div>
+
+                    ${actualStrength ? `
+                    <div style="margin-bottom:4px;">
+                        <b style="color:#2e7d32;">Actual Strength:</b><br>
+                        ${actualStrength}
+                    </div>` : ""}
+
+                    ${availableStrength ? `
+                    <div style="margin-bottom:4px;">
+                        <b style="color:#ef6c00;">Available Strength:</b><br>
+                        ${availableStrength}
+                    </div>` : ""}
+
+                    ${contact ? `
+                    <div style="margin-top:6px;padding-top:6px;border-top:1px solid #ddd;">
+                        📞 <b>${contact}</b>
+                    </div>` : ""}
+
+                    <div style="margin-top:8px;">
+                        <span style="
+                            background:linear-gradient(135deg,#3949ab,#1e88e5);
+                            color:white;
+                            padding:4px 10px;
+                            border-radius:12px;
+                            font-size:11px;
+                            font-weight:600;">
+                            ${type}
+                        </span>
+                    </div>
+                </div>
+            `);
+
+            markers.addLayer(marker);
+            allMarkersData.push(marker);
+            bounds.push([lat, lon]);
         }
 
-        // ⭐ Premium Glowing Icon
-        function createPremiumIcon(color) {
-            return L.divIcon({
-                className: '',
-                html: `<div style="
-                width:18px;height:18px;
-                background:${color};
-                border-radius:50%;
-                border:3px solid white;
-                box-shadow:0 0 6px ${color},0 0 10px ${color},0 0 16px ${color};
-            "></div>`,
-                iconSize: [24, 24],
-                iconAnchor: [12, 12]
+        // Populate Filter
+        var filter = document.getElementById("typeFilter");
+        if (filter.options.length <= 1) {
+            typesSet.forEach(t => {
+                var opt = document.createElement("option");
+                opt.value = t;
+                opt.text = t;
+                filter.appendChild(opt);
             });
         }
 
-        var allMarkersData = [];
+        // Auto fit map to markers
+        if (bounds.length > 0) {
+            map.fitBounds(bounds, { padding: [30, 30] });
+        }
 
-        // 🚀 LOAD DATA
-        function loadData(selectedType = "ALL", searchText = "") {
-                markers.clearLayers();
-                allMarkersData = [];
+    });
+}
 
-                fetch(sheetURL)
-                    .then(r => r.text())
-                    .then(data => {
-                        var rows = data.trim().split("\n");
-                        var typesSet = new Set();
+// 🔄 Initial Load
+loadData();
 
-                        for (var i = 1; i < rows.length; i++) {
-                            var cols = rows[i].split("\t");
+// 🎛 Type Filter
+document.getElementById("typeFilter").addEventListener("change", function () {
+    loadData(this.value, document.getElementById("searchBox").value);
+});
 
-                            // 🟢 COLUMN MAPPING (UPDATED)
-                            var type = cols[1]?.trim() || "Unit";      // Column B (UNCHANGED)
-                            var caption = cols[28]?.trim();            // Column AC (Name)
-                            var lat = parseFloat(cols[29]);            // Column AD
-                            var lon = parseFloat(cols[30]);            // Column AE
-                            var hq = cols[31]?.trim() || "";           // Column AF
+// 🔎 Search Box
+document.getElementById("searchBox").addEventListener("input", function () {
+    loadData(document.getElementById("typeFilter").value, this.value);
+});
 
-                            if (!caption || isNaN(lat) || isNaN(lon)) continue;
-                            if (selectedType !== "ALL" && type !== selectedType) continue;
-                            if (searchText && !caption.toLowerCase().includes(searchText.toLowerCase())) continue;
+// 🔁 AUTO REFRESH
+setInterval(function () {
+    loadData(document.getElementById("typeFilter").value, document.getElementById("searchBox").value);
+}, 60000);
 
-                            typesSet.add(type);
+// 🏷 HQ COLOR LEGEND
+var legend = L.control({ position: 'bottomright' });
+legend.onAdd = function () {
+    var div = L.DomUtil.create('div', 'legend');
+    div.innerHTML += "<b>Legend</b><br>";
 
-                            var color = getHQColor(hq);
+    const legendItems = {
+        "DG Reserve": "#FF0000",
+        "HQ": "#0000FF",
+        "DMG": "#00FF00",
+        "PS": "#FFFF00",
+        "TG": "#FF00FF",
+        "STG": "#7FFFD4",
+        "OP": "#A52A2A",
+        "TOP": "#808000",
+        "IC": "#008000",
+        "ROP": "#FFA500",
+        "BOP": "#ADD8E6",
+        "CAMP": "#00FFFF"
+    };
 
-                            var marker = L.marker([lat, lon], {
-                                icon: createPremiumIcon(color)
-                            }).bindPopup(`
-                    <div class="popup-card">
-                        <div class="popup-title">${caption}</div>
-                        <div class="popup-type">${type}</div>
-                    </div>
-                `);
+    for (let key in legendItems) {
+        div.innerHTML += `<div style="margin:4px 0;">
+            <span style="display:inline-block;width:14px;height:14px;border-radius:50%;
+            background:${legendItems[key]};margin-right:6px;"></span>${key}
+        </div>`;
+    }
+    return div;
+};
+legend.addTo(map);
+</script>
 
-                            markers.addLayer(marker);
-                            allMarkersData.push(marker);
-                        }
-
-                        // Populate Filter Once
-                        var filter = document.getElementById("typeFilter");
-                        if (filter.options.length <= 1) {
-                            typesSet.forEach(t => {
-                                var opt = document.createElement("option");
-                                opt.value = t;
-                                opt.text = t;
-                                filter.appendChild(opt);
-                            });
-                        }
-                    });
-            }
-
-        // 🔄 Initial Load
-        loadData();
-
-        // 🎛 Type Filter
-        document.getElementById("typeFilter").addEventListener("change", function () {
-            loadData(this.value, document.getElementById("searchBox").value);
-        });
-
-        // 🔎 Search Box
-        document.getElementById("searchBox").addEventListener("input", function () {
-            loadData(document.getElementById("typeFilter").value, this.value);
-        });
-
-        // 🔁 AUTO REFRESH EVERY 30 SECONDS
-        setInterval(function () {
-            loadData(document.getElementById("typeFilter").value, document.getElementById("searchBox").value);
-        }, 60000);
-
-        // 🏷 HQ COLOR LEGEND
-        var legend = L.control({ position: 'bottomright' });
-        legend.onAdd = function () {
-            var div = L.DomUtil.create('div', 'legend');
-            div.innerHTML += "<b>Legend</b><br>";
-
-            const legendItems = {
-                "DG Reserve": "#FF0000",
-                "HQ": "#0000FF",
-                "DMG": "#00FF00",
-                "PS": "#FFFF00",
-                "TG": "#FF00FF",
-                "STG": "#7FFFD4",
-                "OP": "#A52A2A",
-                "TOP": "#808000",
-                "IC": "#008000",
-                "ROP": "#FFA500",
-                "BOP": "#ADD8E6",
-                "CAMP": "#00FFFF"
-            };
-
-            for (let key in legendItems) {
-                div.innerHTML += `<div style="margin:4px 0;">
-                <span style="display:inline-block;width:14px;height:14px;border-radius:50%;
-                background:${legendItems[key]};margin-right:6px;"></span>${key}
-            </div>`;
-            }
-            return div;
-        };
-        legend.addTo(map);
-    </script>
 </body>
 
 </html>

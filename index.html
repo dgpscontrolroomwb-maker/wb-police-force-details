@@ -187,61 +187,82 @@ function loadData(selectedType = "ALL", searchText = "") {
             var color = getHQColor(hq);
 
             // 🎯 Smart formatting of AC column
-            var lines = caption.split(/\n+/);
-            var unitName = lines[0] || "";
-            var actualStrength = lines.find(l => l.toLowerCase().includes("actual strength")) || "";
-            var availableStrength = lines.find(l => l.toLowerCase().includes("available strength")) || "";
-            var contact = lines.find(l => l.toLowerCase().includes("contact")) || "";
+            // 🎯 Smart formatting of AC column
+var lines = caption.split(/\n+/);
 
-            actualStrength = actualStrength.replace(/actual strength/gi, "").replace(/---/g, "").trim();
-            availableStrength = availableStrength.replace(/available strength/gi, "").replace(/---/g, "").trim();
-            contact = contact.replace(/contact no[:\-]*/gi, "").trim();
+var unitName = lines[0] || "";
+var actualStrengthLine = lines.find(l => l.toLowerCase().includes("actual strength")) || "";
+var availableStrengthLine = lines.find(l => l.toLowerCase().includes("available strength")) || "";
+var contactLine = lines.find(l => l.toLowerCase().includes("contact")) || "";
 
-            var marker = L.marker([lat, lon], {
-                icon: createPremiumIcon(color)
-            }).bindPopup(`
-                <div style="min-width:220px;font-family:Segoe UI;">
-                    <div style="font-weight:700;font-size:15px;color:#0d47a1;margin-bottom:6px;">
-                        ${unitName}
-                    </div>
+// Remove headings and extra text
+var actualStrength = actualStrengthLine
+    .replace(/actual strength/gi, "")
+    .replace(/---/g, "")
+    .trim();
 
-                    ${actualStrength ? `
-                    <div style="margin-bottom:4px;">
-                        <b style="color:#2e7d32;">Actual Strength:</b><br>
-                        ${actualStrength}
-                    </div>` : ""}
+var availableStrength = availableStrengthLine
+    .replace(/available strength/gi, "")
+    .replace(/---/g, "")
+    .trim();
 
-                    ${availableStrength ? `
-                    <div style="margin-bottom:4px;">
-                        <b style="color:#ef6c00;">Available Strength:</b><br>
-                        ${availableStrength}
-                    </div>` : ""}
+var contact = contactLine
+    .replace(/contact no[:\-]*/gi, "")
+    .trim();
 
-                    ${contact ? `
-                    <div style="margin-top:6px;padding-top:6px;border-top:1px solid #ddd;">
-                        📞 <b>${contact}</b>
-                    </div>` : ""}
+var marker = L.marker([lat, lon], {
+    icon: createPremiumIcon(color)
+}).bindPopup(`
+    <div style="min-width:220px;font-family:Segoe UI;line-height:1.5">
 
-                    <div style="margin-top:8px;">
-                        <span style="
-                            background:linear-gradient(135deg,#3949ab,#1e88e5);
-                            color:white;
-                            padding:4px 10px;
-                            border-radius:12px;
-                            font-size:11px;
-                            font-weight:600;">
-                            ${type}
-                        </span>
-                    </div>
-                </div>
-            `);
+        <!-- Unit Name -->
+        <div style="font-weight:700;font-size:15px;color:#0d47a1;margin-bottom:6px;">
+            ${unitName}
+        </div>
 
-            markers.addLayer(marker);
+        <!-- Actual Strength -->
+        ${actualStrength ? `
+        <div style="margin-bottom:6px;">
+            <b style="color:#2e7d32;">Actual Strength</b><br>
+            ${actualStrength}
+        </div>` : ""}
+
+        <!-- Available Strength -->
+        ${availableStrength ? `
+        <div style="margin-bottom:6px;">
+            <b style="color:#ef6c00;">Available Strength</b><br>
+            ${availableStrength}
+        </div>` : ""}
+
+        <!-- Contact -->
+        ${contact ? `
+        <div style="margin-top:6px;padding-top:6px;border-top:1px solid #ddd;">
+            📞 ${contact}
+        </div>` : ""}
+
+        <!-- Type Badge -->
+        <div style="margin-top:8px;">
+            <span style="
+                background:linear-gradient(135deg,#3949ab,#1e88e5);
+                color:white;
+                padding:4px 10px;
+                border-radius:12px;
+                font-size:11px;
+                font-weight:600;">
+                ${type}
+            </span>
+        </div>
+    </div>
+`);
+
+
+             markers.addLayer(marker);
             allMarkersData.push(marker);
             bounds.push([lat, lon]);
-        }
 
-        // Populate Filter
+        } // ✅ CLOSE FOR LOOP HERE
+
+        // Populate Filter (run ONCE, not per row)
         var filter = document.getElementById("typeFilter");
         if (filter.options.length <= 1) {
             typesSet.forEach(t => {
@@ -257,8 +278,9 @@ function loadData(selectedType = "ALL", searchText = "") {
             map.fitBounds(bounds, { padding: [30, 30] });
         }
 
-    });
-}
+    }); // ✅ CLOSE fetch().then(...)
+} // ✅ CLOSE loadData()
+
 
 // 🔄 Initial Load
 loadData();

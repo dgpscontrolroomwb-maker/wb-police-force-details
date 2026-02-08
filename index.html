@@ -100,7 +100,7 @@
     <script>
 var map = L.map('map', { zoomControl: true }).setView([23.5, 87.5], 7);
 
-// 🌍 Premium Map Layer
+// 🌍 Map Layer
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap',
     maxZoom: 19
@@ -172,11 +172,11 @@ function loadData(selectedType = "ALL", searchText = "") {
 
             var cols = rows[i].split("\t");
 
-            var type = cols[1]?.trim() || "Unit";   // Column B
-            var caption = cols[28]?.trim();         // Column AC
-            var lat = parseFloat(cols[29]);         // Column AD
-            var lon = parseFloat(cols[30]);         // Column AE
-            var hq = cols[31]?.trim() || "";        // Column AF
+            var type = cols[1]?.trim() || "Unit";
+            var caption = cols[28]?.trim();
+            var lat = parseFloat(cols[29]);
+            var lon = parseFloat(cols[30]);
+            var hq = cols[31]?.trim() || "";
 
             if (!caption || isNaN(lat) || isNaN(lon)) continue;
             if (selectedType !== "ALL" && type !== selectedType) continue;
@@ -186,83 +186,94 @@ function loadData(selectedType = "ALL", searchText = "") {
 
             var color = getHQColor(hq);
 
-            // 🎯 Smart formatting of AC column
-            // 🎯 Smart formatting of AC column
-var lines = caption.split(/\n+/);
+            // 🔍 CLEAN FULL TEXT
+            var fullText = caption.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
 
-var unitName = lines[0] || "";
-var actualStrengthLine = lines.find(l => l.toLowerCase().includes("actual strength")) || "";
-var availableStrengthLine = lines.find(l => l.toLowerCase().includes("available strength")) || "";
-var contactLine = lines.find(l => l.toLowerCase().includes("contact")) || "";
+            // 🏷 Heading
+            var unitName = caption.split("\n")[0]?.trim() || "";
 
-// Remove headings and extra text
-var actualStrength = actualStrengthLine
-    .replace(/actual strength/gi, "")
-    .replace(/---/g, "")
-    .trim();
+            // 🟢 Actual Strength
+            var actualMatch = fullText.match(/Actual Strength\s*---\s*(.*?)(AVAILABLE STRENGTH|Contact No|$)/i);
+            var actualStrength = actualMatch ? actualMatch[1].replace(/,\s*$/, "").trim() : "";
 
-var availableStrength = availableStrengthLine
-    .replace(/available strength/gi, "")
-    .replace(/---/g, "")
-    .trim();
+            // 🟠 Available Strength
+            var availableMatch = fullText.match(/AVAILABLE STRENGTH\s*---\s*(.*?)(Contact No|$)/i);
+            var availableStrength = availableMatch ? availableMatch[1].replace(/,\s*$/, "").trim() : "";
 
-var contact = contactLine
-    .replace(/contact no[:\-]*/gi, "")
-    .trim();
+            // 📞 Contact
+            var contactMatch = fullText.match(/Contact No[:\-]*\s*(.*)$/i);
+            var contact = contactMatch ? contactMatch[1].trim() : "";
 
-var marker = L.marker([lat, lon], {
-    icon: createPremiumIcon(color)
-}).bindPopup(`
-    <div style="min-width:220px;font-family:Segoe UI;line-height:1.5">
+            var marker = L.marker([lat, lon], {
+                icon: createPremiumIcon(color)
+            }).bindPopup(`
+                <div style="
+                    min-width:260px;
+                    font-family:'Segoe UI';
+                    border-radius:12px;
+                    overflow:hidden;
+                    box-shadow:0 6px 18px rgba(0,0,0,0.25);
+                    background:white;
+                ">
 
-        <!-- Unit Name -->
-        <div style="font-weight:700;font-size:15px;color:#0d47a1;margin-bottom:6px;">
-            ${unitName}
-        </div>
+                    <div style="
+                        background:linear-gradient(135deg,#0d47a1,#1976d2);
+                        color:white;
+                        padding:10px 12px;
+                        font-weight:700;
+                        font-size:14px;">
+                        ${unitName}
+                    </div>
 
-        <!-- Actual Strength -->
-        ${actualStrength ? `
-        <div style="margin-bottom:6px;">
-            <b style="color:#2e7d32;">Actual Strength</b><br>
-            ${actualStrength}
-        </div>` : ""}
+                    ${actualStrength ? `
+                    <div style="
+                        padding:10px 12px;
+                        background:#e8f5e9;
+                        color:#1b5e20;
+                        font-size:13px;">
+                        <b>Actual Strength</b><br>
+                        ${actualStrength}
+                    </div>` : ""}
 
-        <!-- Available Strength -->
-        ${availableStrength ? `
-        <div style="margin-bottom:6px;">
-            <b style="color:#ef6c00;">Available Strength</b><br>
-            ${availableStrength}
-        </div>` : ""}
+                    ${availableStrength ? `
+                    <div style="
+                        padding:10px 12px;
+                        background:#fff3e0;
+                        color:#e65100;
+                        font-size:13px;">
+                        <b>Available Strength</b><br>
+                        ${availableStrength}
+                    </div>` : ""}
 
-        <!-- Contact -->
-        ${contact ? `
-        <div style="margin-top:6px;padding-top:6px;border-top:1px solid #ddd;">
-            📞 ${contact}
-        </div>` : ""}
+                    ${contact ? `
+                    <div style="
+                        padding:10px 12px;
+                        background:#f3e5f5;
+                        color:#4a148c;
+                        font-size:13px;">
+                        📞 <b>${contact}</b>
+                    </div>` : ""}
 
-        <!-- Type Badge -->
-        <div style="margin-top:8px;">
-            <span style="
-                background:linear-gradient(135deg,#3949ab,#1e88e5);
-                color:white;
-                padding:4px 10px;
-                border-radius:12px;
-                font-size:11px;
-                font-weight:600;">
-                ${type}
-            </span>
-        </div>
-    </div>
-`);
+                    <div style="padding:10px 12px;text-align:right;">
+                        <span style="
+                            background:linear-gradient(135deg,#3949ab,#1e88e5);
+                            color:white;
+                            padding:4px 10px;
+                            border-radius:12px;
+                            font-size:11px;
+                            font-weight:600;">
+                            ${type}
+                        </span>
+                    </div>
 
+                </div>
+            `);
 
-             markers.addLayer(marker);
+            markers.addLayer(marker);
             allMarkersData.push(marker);
             bounds.push([lat, lon]);
+        }
 
-        } // ✅ CLOSE FOR LOOP HERE
-
-        // Populate Filter (run ONCE, not per row)
         var filter = document.getElementById("typeFilter");
         if (filter.options.length <= 1) {
             typesSet.forEach(t => {
@@ -273,14 +284,12 @@ var marker = L.marker([lat, lon], {
             });
         }
 
-        // Auto fit map to markers
         if (bounds.length > 0) {
             map.fitBounds(bounds, { padding: [30, 30] });
         }
 
-    }); // ✅ CLOSE fetch().then(...)
-} // ✅ CLOSE loadData()
-
+    });
+}
 
 // 🔄 Initial Load
 loadData();
@@ -331,6 +340,7 @@ legend.onAdd = function () {
 };
 legend.addTo(map);
 </script>
+
 
 </body>
 

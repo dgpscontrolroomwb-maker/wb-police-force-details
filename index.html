@@ -155,71 +155,71 @@
         var allMarkersData = [];
 
         // 🚀 LOAD DATA (FULL SCAN + SAFE SKIP)
-            function loadData(selectedType = "ALL", searchText = "") {
+        function loadData(selectedType = "ALL", searchText = "") {
 
-                markers.clearLayers();
-                allMarkersData = [];
+            markers.clearLayers();
+            allMarkersData = [];
 
-                fetch(sheetURL)
-                    .then(r => r.text())
-                    .then(data => {
+            fetch(sheetURL)
+                .then(r => r.text())
+                .then(data => {
 
-                        var rows = data.split("\n"); // don't trim, keep full row count
-                        var typesSet = new Set();
-                        var bounds = [];
+                    var rows = data.split("\n"); // don't trim, keep full row count
+                    var typesSet = new Set();
+                    var bounds = [];
 
-                        var maxRows = Math.min(rows.length, 4000); // scan up to 4000 rows
+                    var maxRows = Math.min(rows.length, 4000); // scan up to 4000 rows
 
-                        for (var i = 1; i < maxRows; i++) {
+                    for (var i = 1; i < maxRows; i++) {
 
-                            if (!rows[i] || rows[i].trim() === "") continue; // skip blank line
+                        if (!rows[i] || rows[i].trim() === "") continue; // skip blank line
 
-                            var cols = rows[i].split("\t");
-                            if (cols.length < 32) continue; // skip incomplete rows
+                        var cols = rows[i].split("\t");
+                        if (cols.length < 32) continue; // skip incomplete rows
 
-                            var type = cols[1]?.trim();      // Column B (MUST exist)
-                            var caption = cols[28]?.trim();  // Column AC
-                            var lat = parseFloat(cols[29]);  // Column AD
-                            var lon = parseFloat(cols[30]);  // Column AE
-                            var hq = cols[31]?.trim() || ""; // Column AF
+                        var type = cols[1]?.trim();      // Column B (MUST exist)
+                        var caption = cols[28]?.trim();  // Column AC
+                        var lat = parseFloat(cols[29]);  // Column AD
+                        var lon = parseFloat(cols[30]);  // Column AE
+                        var hq = cols[31]?.trim() || ""; // Column AF
 
-                            // 🚫 Skip rows missing required data
-                            if (!type || !caption || isNaN(lat) || isNaN(lon)) continue;
+                        // 🚫 Skip rows missing required data
+                        if (!type || !caption || isNaN(lat) || isNaN(lon)) continue;
 
-                            // 🎯 Filters
-                            if (selectedType !== "ALL" && type !== selectedType) continue;
-                            if (searchText && !caption.toLowerCase().includes(searchText.toLowerCase())) continue;
+                        // 🎯 Filters
+                        if (selectedType !== "ALL" && type !== selectedType) continue;
+                        if (searchText && !caption.toLowerCase().includes(searchText.toLowerCase())) continue;
 
-                            typesSet.add(type);
+                        typesSet.add(type);
 
-                            var color = getHQColor(hq);
+                        var color = getHQColor(hq);
 
-                            // 🔍 CLEAN FULL TEXT
-                            var fullText = caption.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
+                        // 🔍 CLEAN FULL TEXT
+                        var fullText = caption.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
 
-                            // 🏷 Heading
-                            var firstLine = caption.split("\n")[0] || "";
-                            var unitName = firstLine
-                                .replace(/Actual Strength.*/i, "")
-                                .replace(/AVAILABLE STRENGTH.*/i, "")
-                                .replace(/Contact No.*/i, "")
-                                .trim();
+                        // 🏷 Heading
+                        var firstLine = caption.split("\n")[0] || "";
+                        var unitName = firstLine
+                            .replace(/Actual Strength.*/i, "")
+                            .replace(/AVAILABLE STRENGTH.*/i, "")
+                            .replace(/Contact No.*/i, "")
+                            .trim();
 
-                            // 🟢 Actual Strength
-                            var actualMatch = fullText.match(/Actual Strength\s*---\s*(.*?)(AVAILABLE STRENGTH|Contact No|$)/i);
-                            var actualStrength = actualMatch ? actualMatch[1].replace(/,\s*$/, "").trim() : "";
+                        // 🟢 Actual Strength
+                        var actualMatch = fullText.match(/Actual Strength\s*---\s*(.*?)(AVAILABLE STRENGTH|Contact No|$)/i);
+                        var actualStrength = actualMatch ? actualMatch[1].replace(/,\s*$/, "").trim() : "";
 
-                            // 🟠 Available Strength
-                            var availableMatch = fullText.match(/AVAILABLE STRENGTH\s*---\s*(.*?)(Contact No|$)/i);
-                            var availableStrength = availableMatch ? availableMatch[1].replace(/,\s*$/, "").trim() : "";
+                        // 🟠 Available Strength
+                        var availableMatch = fullText.match(/AVAILABLE STRENGTH\s*---\s*(.*?)(Contact No|$)/i);
+                        var availableStrength = availableMatch ? availableMatch[1].replace(/,\s*$/, "").trim() : "";
 
-                            // 📞 Contact
-                            var contactMatch = fullText.match(/Contact No[:\-]*\s*(.*)$/i);
-                            var contact = contactMatch ? contactMatch[1].trim() : "";
+                        // 📞 Contact
+                        var contactMatch = fullText.match(/Contact No[:\-]*\s*(.*)$/i);
+                        var contact = contactMatch ? contactMatch[1].trim() : "";
 
-                            var marker = L.marker([lat, lon], {
-                                icon: createPremiumIcon(color)
-                            }).bindPopup(`
+                        var marker = L.marker([lat, lon], {
+                            icon: createPremiumIcon(color)
+                        }).bindPopup(`
                 <div style="
                     min-width:260px;
                     font-family:'Segoe UI';
@@ -268,27 +268,27 @@
                 </div>
             `);
 
-                            markers.addLayer(marker);
-                            allMarkersData.push(marker);
-                            bounds.push([lat, lon]);
-                        }
+                        markers.addLayer(marker);
+                        allMarkersData.push(marker);
+                        bounds.push([lat, lon]);
+                    }
 
-                        var filter = document.getElementById("typeFilter");
-                        if (filter.options.length <= 1) {
-                            typesSet.forEach(t => {
-                                var opt = document.createElement("option");
-                                opt.value = t;
-                                opt.text = t;
-                                filter.appendChild(opt);
-                            });
-                        }
+                    var filter = document.getElementById("typeFilter");
+                    if (filter.options.length <= 1) {
+                        typesSet.forEach(t => {
+                            var opt = document.createElement("option");
+                            opt.value = t;
+                            opt.text = t;
+                            filter.appendChild(opt);
+                        });
+                    }
 
-                        if (bounds.length > 0) {
-                            map.fitBounds(bounds, { padding: [30, 30] });
-                        }
+                    if (bounds.length > 0) {
+                        map.fitBounds(bounds, { padding: [30, 30] });
+                    }
 
-                    });
-            }
+                });
+        }
 
         // 🔄 Initial Load
         loadData();
@@ -315,18 +315,33 @@
             div.innerHTML += "<b>Legend</b><br>";
 
             const legendItems = {
-                "DG Reserve": "#FF0000",
-                "HQ": "#0000FF",
-                "DMG": "#00FF00",
-                "PS": "#FFFF00",
-                "TG": "#FF00FF",
-                "STG": "#7FFFD4",
-                "OP": "#A52A2A",
-                "TOP": "#808000",
-                "IC": "#008000",
-                "ROP": "#FFA500",
-                "BOP": "#ADD8E6",
-                "CAMP": "#00FFFF"
+                "DG Reserve": "#e6194b",
+                "Law & Order Duty": "#3cb44b",
+                "Assault Group": "#ffe119",
+                "RAF": "#4363d8",
+                "Lady RAF": "#f58231",
+                "STRACO": "#911eb4",
+                "Quick Response Team": "#42d4f4",
+                "Winners Team": "#f032e6",
+                "DMG": "#bfef45",
+                "Head Quarter": "#fabed4",
+                "EF Lines": "#469990",
+                "Police Station": "#dcbeff",
+                "Out Post": "#9A6324",
+                "Town Out Post": "#fffac8",
+                "Investigation Center": "#800000",
+                "Border Out Post": "#aaffc3",
+                "Rural Out Post": "#808000",
+                "Beat House": "#ffd8b1",
+                "Traffic Guard": "#000075",
+                "Sub-Traffic Guard": "#a9a9a9",
+                "Camp": "#42f572",
+                "House Guard": "#ffffff",
+                "Anti- Sabotage Check": "#e6beff",
+                "Court": "#42f5e6",
+                "Office": "#f54242",
+                "Others": "#000000"
+
             };
 
             for (let key in legendItems) {

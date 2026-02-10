@@ -115,7 +115,7 @@
         map.addLayer(markers);
 
         // 📡 TSV DATA SOURCE
-        var sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQws1aF25SY9EK4d2o455DnhKd136BwBn7jhJ_PP4L6lLDU1j9cRiLyZf0ilCaeH0D1mz8RgwQoLV9k/pub?gid=0&single=true&output=csv";
+        var sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQws1aF25SY9EK4d2o455DnhKd136BwBn7jhJ_PP4L6lLDU1j9cRiLyZf0ilCaeH0D1mz8RgwQoLV9k/pub?gid=0&single=true&output=tsv";
 
         // 🎨 HQ COLOR MAP
         function getHQColor(hq) {
@@ -184,11 +184,13 @@
                     var typesSet = new Set();
                     var bounds = [];
 
-                    for (var i = 1; i < rows.length; i++) {
+                    var maxRows = Math.min(rows.length, 4000); // scan up to 4000 rows
+
+                    for (var i = 1; i < maxRows; i++) {
 
                         if (!rows[i] || rows[i].trim() === "") continue; // skip blank line
 
-                        var cols = rows[i].split(",");
+                        var cols = rows[i].split("\t");
                         if (cols.length < 32) continue; // skip incomplete rows
 
                         var type = cols[1]?.trim();      // Column B (MUST exist)

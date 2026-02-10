@@ -96,7 +96,6 @@
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
     <script>
         var map = L.map('map', { zoomControl: true }).setView([23.5, 87.5], 7);
@@ -116,7 +115,7 @@
         map.addLayer(markers);
 
         // 📡 TSV DATA SOURCE
-        var sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQws1aF25SY9EK4d2o455DnhKd136BwBn7jhJ_PP4L6lLDU1j9cRiLyZf0ilCaeH0D1mz8RgwQoLV9k/pub?gid=0&single=true&output=csv";
+        var sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQws1aF25SY9EK4d2o455DnhKd136BwBn7jhJ_PP4L6lLDU1j9cRiLyZf0ilCaeH0D1mz8RgwQoLV9k/pub?gid=0&single=true&output=tsv";
 
         // 🎨 HQ COLOR MAP
         function getHQColor(hq) {
@@ -177,28 +176,33 @@
             markers.clearLayers();
             allMarkersData = [];
 
-           Papa.parse(sheetURL, {
-                download: true,
-                skipEmptyLines: true,
-                complete: function (results) {
+            fetch(sheetURL)
+                .then(r => r.text())
+                .then(data => {
 
-                    var rows = results.data; // Fully parsed CSV rows
+                    var rows = data.split("\n"); // don't trim, keep full row count
                     var typesSet = new Set();
                     var bounds = [];
 
-                    for (var i = 1; i < rows.length; i++) {
+                    var maxRows = Math.min(rows.length, 4000); // scan up to 4000 rows
 
-                        var cols = rows[i];
-                        if (!cols || cols.length < 32) continue;
+                    for (var i = 1; i < maxRows; i++) {
 
-                        var type = cols[1]?.trim();      // Column B
+                        if (!rows[i] || rows[i].trim() === "") continue; // skip blank line
+
+                        var cols = rows[i].split("\t");
+                        if (cols.length < 32) continue; // skip incomplete rows
+
+                        var type = cols[1]?.trim();      // Column B (MUST exist)
                         var caption = cols[28]?.trim();  // Column AC
                         var lat = parseFloat(cols[29]);  // Column AD
                         var lon = parseFloat(cols[30]);  // Column AE
                         var hq = cols[31]?.trim() || ""; // Column AF
 
+                        // 🚫 Skip rows missing required data
                         if (!type || !caption || isNaN(lat) || isNaN(lon)) continue;
 
+                        // 🎯 Filters
                         if (selectedType !== "ALL" && type !== selectedType) continue;
                         if (searchText && !caption.toLowerCase().includes(searchText.toLowerCase())) continue;
 
@@ -206,8 +210,10 @@
 
                         var color = getHQColor(hq);
 
+                        // 🔍 CLEAN FULL TEXT
                         var fullText = caption.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
 
+                        // 🏷 Heading
                         var firstLine = caption.split("\n")[0] || "";
                         var unitName = firstLine
                             .replace(/Actual Strength.*/i, "")
@@ -215,12 +221,15 @@
                             .replace(/Contact No.*/i, "")
                             .trim();
 
+                        // 🟢 Actual Strength
                         var actualMatch = fullText.match(/Actual Strength\s*---\s*(.*?)(AVAILABLE STRENGTH|Contact No|$)/i);
                         var actualStrength = actualMatch ? actualMatch[1].replace(/,\s*$/, "").trim() : "";
 
+                        // 🟠 Available Strength
                         var availableMatch = fullText.match(/AVAILABLE STRENGTH\s*---\s*(.*?)(Contact No|$)/i);
                         var availableStrength = availableMatch ? availableMatch[1].replace(/,\s*$/, "").trim() : "";
 
+                        // 📞 Contact
                         var contactMatch = fullText.match(/Contact No[:\-]*\s*(.*)$/i);
                         var contact = contactMatch ? contactMatch[1].trim() : "";
 
@@ -235,30 +244,49 @@
                     box-shadow:0 6px 18px rgba(0,0,0,0.25);
                     background:white;
                 ">
-                    <div style="background:linear-gradient(135deg,#0d47a1,#1976d2);color:white;padding:10px 12px;font-weight:700;font-size:14px;">
+
+                    <div style="
+                        background:linear-gradient(135deg,#0d47a1,#1976d2);
+                        color:white;
+                        padding:10px 12px;
+                        font-weight:700;
+                        font-size:14px;">
                         ${unitName}
                     </div>
 
-                    ${actualStrength ? `<div style="padding:10px 12px;background:#e8f5e9;color:#1b5e20;font-size:13px;"><b>Actual Strength</b><br>${actualStrength}</div>` : ""}
+                    ${actualStrength ? `
+                    <div style="padding:10px 12px;background:#e8f5e9;color:#1b5e20;font-size:13px;">
+                        <b>Actual Strength</b><br>${actualStrength}
+                    </div>` : ""}
 
-                    ${availableStrength ? `<div style="padding:10px 12px;background:#fff3e0;color:#e65100;font-size:13px;"><b>Available Strength</b><br>${availableStrength}</div>` : ""}
+                    ${availableStrength ? `
+                    <div style="padding:10px 12px;background:#fff3e0;color:#e65100;font-size:13px;">
+                        <b>Available Strength</b><br>${availableStrength}
+                    </div>` : ""}
 
-                    ${contact ? `<div style="padding:10px 12px;background:#f3e5f5;color:#4a148c;font-size:13px;">📞 <b>${contact}</b></div>` : ""}
+                    ${contact ? `
+                    <div style="padding:10px 12px;background:#f3e5f5;color:#4a148c;font-size:13px;">
+                        📞 <b>${contact}</b>
+                    </div>` : ""}
 
                     <div style="padding:10px 12px;text-align:right;">
-                        <span style="background:linear-gradient(135deg,#3949ab,#1e88e5);color:white;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:600;">
+                        <span style="
+                            background:linear-gradient(135deg,#3949ab,#1e88e5);
+                            color:white;
+                            padding:4px 10px;
+                            border-radius:12px;
+                            font-size:11px;
+                            font-weight:600;">
                             ${type}
                         </span>
                     </div>
+
                 </div>
             `);
 
                         markers.addLayer(marker);
+                        allMarkersData.push(marker);
                         bounds.push([lat, lon]);
-                    }
-
-                    if (bounds.length > 0) {
-                        map.fitBounds(bounds, { padding: [30, 30] });
                     }
 
                     var filter = document.getElementById("typeFilter");
@@ -270,8 +298,12 @@
                             filter.appendChild(opt);
                         });
                     }
-                }
-            });
+
+                    if (bounds.length > 0) {
+                        map.fitBounds(bounds, { padding: [30, 30] });
+                    }
+
+                });
         }
 
         // 🔄 Initial Load
@@ -290,7 +322,7 @@
         // 🔁 AUTO REFRESH
         setInterval(function () {
             loadData(document.getElementById("typeFilter").value, document.getElementById("searchBox").value);
-        }, 600000);
+        }, 180000);
 
         // 🏷 HQ COLOR LEGEND
         var legend = L.control({ position: 'bottomright' });
